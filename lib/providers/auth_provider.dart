@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data';
@@ -53,6 +54,13 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return e.toString();
     }
+  }
+
+  Future<void> loginWithProvider(OAuthProvider provider) async {
+    await _supabase.auth.signInWithOAuth(
+      provider,
+      redirectTo: kIsWeb ? null : 'io.supabase.passportphoto://login-callback/',
+    );
   }
 
   Future<String?> uploadPhoto(Uint8List bytes, String filename) async {

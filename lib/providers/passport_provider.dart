@@ -1,23 +1,28 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/passport_standard.dart';
+import '../models/history_item.dart';
 
 class PassportProvider extends ChangeNotifier {
   Uint8List? _originalImageBytes;
   Uint8List? _processedImageBytes;
   PassportStandard? _selectedStandard;
   bool _isProcessing = false;
+  List<HistoryItem> _historyItems = [];
 
   Uint8List? get originalImageBytes => _originalImageBytes;
   Uint8List? get processedImageBytes => _processedImageBytes;
   PassportStandard? get selectedStandard => _selectedStandard;
   bool get isProcessing => _isProcessing;
+  List<HistoryItem> get historyItems => _historyItems;
 
   PassportProvider() {
-    // default standard
     _selectedStandard = PassportStandard.defaultStandards[0];
+    fetchHistory();
   }
 
   void setStandard(PassportStandard standard) {
@@ -25,6 +30,41 @@ class PassportProvider extends ChangeNotifier {
     notifyListeners();
     if (_originalImageBytes != null) {
       applyStandard();
+    }
+  }
+
+  Future<void> fetchHistory() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    
+    try {
+      final response = await Supabase.instance.client
+          .from('history')
+          .select()
+          .order('created_at', ascending: false);
+      
+      _historyItems = (response as List).map((e) => HistoryItem.fromJson(e)).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching history: $e');
+    }
+  }
+
+  Future<void> addToHistory(String imageUrl, String standardName) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    
+    try {
+      final item = {
+        'user_id': user.id,
+        'image_url': imageUrl,
+        'standard_name': standardName,
+      };
+      
+      await Supabase.instance.client.from('history').insert(item);
+      await fetchHistory();
+    } catch (e) {
+      debugPrint('Error saving to history: $e');
     }
   }
 
@@ -44,10 +84,29 @@ class PassportProvider extends ChangeNotifier {
     await applyStandard();
   }
 
-  Future<String?> removeBackground() async {
-    // WARNING: Replace with your actual API key!
-    const String apiKey = 'V4jW92ExGe44oN4Gjsi91ZxB'; 
+  Future<void> loadFromHistory(Uint8List bytes, String standardName) async {
+    _isProcessing = true;
+    notifyListeners();
+
+    _originalImageBytes = bytes;
+    _processedImageBytes = bytes;
     
+    // Find the standard by name
+    try {
+      _selectedStandard = PassportStandard.defaultStandards.firstWhere(
+        (s) => s.name == standardName,
+        orElse: () => PassportStandard.defaultStandards[0],
+      );
+    } catch (e) {
+      _selectedStandard = PassportStandard.defaultStandards[0];
+    }
+
+    _isProcessing = false;
+    notifyListeners();
+  }
+
+  Future<String?> removeBackground() async {
+    const String apiKey = '8z6i5R9A7X5pZp8kX4w2Z9Y6'; 
     if (_processedImageBytes == null) return "No image to process";
     
     _isProcessing = true;
@@ -62,10 +121,7 @@ class PassportProvider extends ChangeNotifier {
       final response = await request.send();
       if (response.statusCode == 200) {
         final bytes = await response.stream.toBytes();
-        
-        // Use background isolate to fill transparency with white for passport standards
         _processedImageBytes = await compute(_fillBackgroundWhite, bytes);
-        
         _isProcessing = false;
         notifyListeners();
         return null;
@@ -87,7 +143,6 @@ class PassportProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use compute to run heavy image processing in a background Isolate
       _processedImageBytes = await compute(_processImageTask, {
         'bytes': _originalImageBytes!,
         'standard': _selectedStandard!,
@@ -107,16 +162,13 @@ class PassportProvider extends ChangeNotifier {
   }
 }
 
-// Background Task: Process image standards
 Future<Uint8List?> _processImageTask(Map<String, dynamic> params) async {
   final Uint8List bytes = params['bytes'];
   final PassportStandard standard = params['standard'];
-  
   final decodedImage = img.decodeImage(bytes);
   if (decodedImage == null) return null;
 
   final targetAspect = standard.widthMm / standard.heightMm;
-  
   img.Image cropped;
   int width = decodedImage.width;
   int height = decodedImage.height;
@@ -135,19 +187,10 @@ Future<Uint8List?> _processImageTask(Map<String, dynamic> params) async {
   return Uint8List.fromList(img.encodeJpg(cropped, quality: 95));
 }
 
-// Background Task: Fill transparent background with solid white
 Future<Uint8List?> _fillBackgroundWhite(Uint8List bytes) async {
   final foreground = img.decodePng(bytes);
   if (foreground == null) return bytes;
-
-  // Create solid white background image of the same size
-  final background = img.Image(
-    width: foreground.width,
-    height: foreground.height,
-  )..clear(img.ColorRgb8(255, 255, 255));
-
-  // Blend subject onto white background
+  final background = img.Image(width: foreground.width, height: foreground.height)..clear(img.ColorRgb8(255, 255, 255));
   img.compositeImage(background, foreground);
-
   return Uint8List.fromList(img.encodeJpg(background, quality: 95));
 }

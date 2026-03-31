@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -299,37 +301,129 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildHistoryPlaceholder(BuildContext context) {
-    return RepaintBoundary(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
+    return Consumer<PassportProvider>(
+      builder: (context, provider, _) {
+        if (provider.historyItems.isEmpty) {
+          return RepaintBoundary(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.history_rounded, size: 56, color: Colors.white.withOpacity(0.1)),
-                const SizedBox(height: 16),
-                Text(
-                  'No History Yet',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.02),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.history_rounded, size: 56, color: Colors.white.withOpacity(0.1)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No History Yet',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.3),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Start creating to see your recent work',
+                        style: TextStyle(color: Colors.white.withOpacity(0.15), fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Start creating to see your recent work',
-                  style: TextStyle(color: Colors.white.withOpacity(0.15), fontSize: 12),
-                ),
-              ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: provider.historyItems.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final item = provider.historyItems[index];
+            return _buildHistoryCard(context, item);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryCard(BuildContext context, dynamic item) {
+    final provider = Provider.of<PassportProvider>(context, listen: false);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () async {
+              try {
+                // 1. Download the image bytes from Supabase
+                final response = await http.get(Uri.parse(item.imageUrl));
+                if (response.statusCode == 200) {
+                  // 2. Update provider state
+                  final bytes = response.bodyBytes;
+                  await provider.loadFromHistory(bytes, item.standardName);
+                  
+                  // 3. Navigate to Editor
+                  if (context.mounted) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const EditorScreen()));
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening: $e')));
+                }
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      item.imageUrl,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(color: Colors.white10, child: const Icon(Icons.image_not_supported, size: 20)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.standardName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM dd, yyyy • hh:mm a').format(item.createdAt),
+                          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.2)),
+                ],
+              ),
             ),
           ),
         ),
