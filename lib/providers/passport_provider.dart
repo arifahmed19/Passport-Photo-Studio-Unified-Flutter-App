@@ -49,31 +49,11 @@ class PassportProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final decodedImage = img.decodeImage(_originalImageBytes!);
-      if (decodedImage != null) {
-        // Compute target aspect ratio from standard
-        final targetAspect = _selectedStandard!.widthMm / _selectedStandard!.heightMm;
-        
-        // Simple center crop
-        img.Image cropped;
-        int width = decodedImage.width;
-        int height = decodedImage.height;
-        double currentAspect = width / height;
-
-        if (currentAspect > targetAspect) {
-          // Image is wider, crop width
-          int newWidth = (height * targetAspect).toInt();
-          int offset = (width - newWidth) ~/ 2;
-          cropped = img.copyCrop(decodedImage, x: offset, y: 0, width: newWidth, height: height);
-        } else {
-          // Image is taller, crop height
-          int newHeight = (width / targetAspect).toInt();
-          int offset = (height - newHeight) ~/ 2;
-          cropped = img.copyCrop(decodedImage, x: 0, y: offset, width: width, height: newHeight);
-        }
-
-        _processedImageBytes = Uint8List.fromList(img.encodeJpg(cropped, quality: 95));
-      }
+      // Use compute to run heavy image processing in a background Isolate
+      _processedImageBytes = await compute(_processImageTask, {
+        'bytes': _originalImageBytes!,
+        'standard': _selectedStandard!,
+      });
     } catch (e) {
       debugPrint('Processing error: $e');
     }
@@ -87,4 +67,34 @@ class PassportProvider extends ChangeNotifier {
     _processedImageBytes = null;
     notifyListeners();
   }
+}
+
+// Top-level function for background processing (Isolate requirement)
+Future<Uint8List?> _processImageTask(Map<String, dynamic> params) async {
+  final Uint8List bytes = params['bytes'];
+  final PassportStandard standard = params['standard'];
+  
+  final decodedImage = img.decodeImage(bytes);
+  if (decodedImage == null) return null;
+
+  // Compute target aspect ratio from standard
+  final targetAspect = standard.widthMm / standard.heightMm;
+  
+  img.Image cropped;
+  int width = decodedImage.width;
+  int height = decodedImage.height;
+  double currentAspect = width / height;
+
+  if (currentAspect > targetAspect) {
+    int newWidth = (height * targetAspect).toInt();
+    int offset = (width - newWidth) ~/ 2;
+    cropped = img.copyCrop(decodedImage, x: offset, y: 0, width: newWidth, height: height);
+  } else {
+    int newHeight = (width / targetAspect).toInt();
+    int offset = (height - newHeight) ~/ 2;
+    cropped = img.copyCrop(decodedImage, x: 0, y: offset, width: width, height: newHeight);
+  }
+
+  // Use higher compression quality but keep processing optimized
+  return Uint8List.fromList(img.encodeJpg(cropped, quality: 95));
 }

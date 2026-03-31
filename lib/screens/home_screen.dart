@@ -8,6 +8,7 @@ import '../providers/passport_provider.dart';
 import '../models/passport_standard.dart';
 import 'editor_screen.dart';
 import 'camera_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -64,6 +65,20 @@ class HomeScreen extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 120.0,
       backgroundColor: Colors.transparent,
+      floating: true,
+      pinned: true,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: IconButton(
+            icon: const Icon(Icons.person_outline_rounded, size: 28),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         centerTitle: false,
@@ -122,41 +137,43 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.15),
-                    child: Text(provider.selectedStandard?.flag ?? '🌍', style: const TextStyle(fontSize: 20)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          provider.selectedStandard?.name ?? 'Select a Country',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                        Text(
-                          provider.selectedStandard?.description ?? 'Standard size requirements',
-                          style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13),
-                        ),
-                      ],
+        RepaintBoundary(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.15),
+                      child: Text(provider.selectedStandard?.flag ?? '🌍', style: const TextStyle(fontSize: 20)),
                     ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.3)),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            provider.selectedStandard?.name ?? 'Select a Country',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Text(
+                            provider.selectedStandard?.description ?? 'Standard size requirements',
+                            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.3)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -282,36 +299,38 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildHistoryPlaceholder(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 48),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.02),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.history_rounded, size: 56, color: Colors.white.withOpacity(0.1)),
-              const SizedBox(height: 16),
-              Text(
-                'No History Yet',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.02),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.history_rounded, size: 56, color: Colors.white.withOpacity(0.1)),
+                const SizedBox(height: 16),
+                Text(
+                  'No History Yet',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.3),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Start creating to see your recent work',
-                style: TextStyle(color: Colors.white.withOpacity(0.15), fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'Start creating to see your recent work',
+                  style: TextStyle(color: Colors.white.withOpacity(0.15), fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
       ),

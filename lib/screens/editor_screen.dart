@@ -87,41 +87,43 @@ class EditorScreen extends StatelessWidget {
 
   Widget _buildStandardInfo(BuildContext context, PassportProvider provider) {
     final std = provider.selectedStandard!;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Format', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
-                  Text(std.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                ],
-              ),
-              const Divider(height: 32, color: Colors.white10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Dimensions', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
-                  Text('${std.widthMm} x ${std.heightMm} mm', 
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      fontSize: 15,
-                      color: Theme.of(context).primaryColor,
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Format', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
+                    Text(std.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
+                const Divider(height: 32, color: Colors.white10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Dimensions', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
+                    Text('${std.widthMm} x ${std.heightMm} mm', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 15,
+                        color: Theme.of(context).primaryColor,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
