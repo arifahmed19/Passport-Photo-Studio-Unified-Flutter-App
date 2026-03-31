@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data';
 
 class AuthProvider extends ChangeNotifier {
-  // Lazy getters to prevent crash before Firebase.initializeApp()
-  FirebaseAuth get _auth => FirebaseAuth.instance;
-  FirebaseFirestore get _db => FirebaseFirestore.instance;
-  FirebaseStorage get _storage => FirebaseStorage.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   
   User? _user;
   bool _isLoading = false;
@@ -18,33 +13,27 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   AuthProvider() {
-    try {
-      _auth.authStateChanges().listen((user) {
-        _user = user;
-        notifyListeners();
-      });
-    } catch (e) {
-      debugPrint('Firebase not initialized yet: $e');
-    }
+    // Listen for auth state changes
+    _supabase.auth.onAuthStateChange.listen((data) {
+      _user = data.session?.user;
+      notifyListeners();
+    });
+    
+    // Initial user check
+    _user = _supabase.auth.currentUser;
   }
 
   Future<String?> register(String email, String password, String name) async {
     _setLoading(true);
     try {
-      UserCredential res = await _auth.createUserWithEmailAndPassword(
+      final AuthResponse res = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: {'full_name': name},
       );
       
-      await _db.collection('users').doc(res.user!.uid).set({
-        'uid': res.user!.uid,
-        'email': email,
-        'name': name,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
       _setLoading(false);
-      return null;
+      return res.user == null ? "Registration failed" : null;
     } catch (e) {
       _setLoading(false);
       return e.toString();
@@ -54,7 +43,10 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> login(String email, String password) async {
     _setLoading(true);
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
       _setLoading(false);
       return null;
     } catch (e) {
@@ -67,16 +59,23 @@ class AuthProvider extends ChangeNotifier {
     if (_user == null) return "Not logged in";
     
     try {
-      final ref = _storage.ref().child('users/${_user!.uid}/photos/$filename');
-      await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-      return await ref.getDownloadURL();
+      // Bucket name: photos (Must create this bucket in Supabase)
+      final String path = '${_user!.id}/$filename';
+      await _supabase.storage.from('photos').uploadBinary(
+        path,
+        bytes,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+      );
+      
+      return _supabase.storage.from('photos').getPublicUrl(path);
     } catch (e) {
+      debugPrint('Upload error: $e');
       return null;
     }
   }
 
   Future<void> logout() async {
-    await _auth.signOut();
+    await _supabase.auth.signOut();
   }
 
   void _setLoading(bool value) {

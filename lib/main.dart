@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme.dart';
 import 'providers/passport_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/editor_screen.dart';
 import 'screens/auth_screen.dart';
-// import 'firebase_options.dart'; // Uncomment after running 'flutterfire configure'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // NOTE: You must run 'flutterfire configure' to generate firebase_options.dart
-  // Then uncomment the following block:
-  /*
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  // REPLACE with your Project URL and Anon Key from Supabase Dashboard
+  await Supabase.initialize(
+    url: 'https://dvxncyptzoeblzengbfk.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2eG5jeXB0em9lYmx6ZW5nYmZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4OTg3NTAsImV4cCI6MjA5MDQ3NDc1MH0.4bk9ofpvZH8vfLsgk9pnBh3v87LXHM5sw6JU_SdiUC4',
   );
-  */
 
   runApp(
     MultiProvider(
