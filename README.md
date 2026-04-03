@@ -101,6 +101,8 @@ lib/
 
 ---
 
+---
+
 ## 👨‍💻 Created By
 **Arif Ahmed**  
 [*GitHub Portfolio*](https://github.com/arifahmed19)
@@ -108,3 +110,8 @@ lib/
 ### ☕ Support My Work
 If you find this project useful, you can support me via Binance:
 **UID: 1210563042** (Copy from the app's Profile section)
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
